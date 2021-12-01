@@ -23,13 +23,14 @@ def main():
     st.write("\n")
     data = fetch_data()
     st.write("Brief overview of data!")
-    st.dataframe(data.describe())
+    st.dataframe(data.describe().style.format("{:.8%}"))
 
     population_threshold = st.text_input("Select the population density threshold", value=1.734387e-05)
     population_threshold = float(population_threshold)
 
     num_estimators = st.text_input("Number of estimators", value=10)
     num_estimators = int(num_estimators)
+
 
     train_test_split_ratio = st.text_input("Enter train test split ratio", value=0.2)
     train_test_split_ratio = float(train_test_split_ratio)
@@ -41,8 +42,6 @@ def main():
     X= data[['Per_Capita_Income', 'Perc_Diff_Income_County_vs_State', 'Per_Capita_GDP', 'UNP_Rate', 'higher_degree', 'Population_Density', 'State', 'Metro']]
     y = data['Crime_Density_Per_1000']
 
-    X.to_csv("X.csv", index=False)
-    y.to_csv("y.csv", index=False)
     # handle categorical variable
     State_dummies=pd.get_dummies(X['State'],drop_first=True)
     # state_dummies = OneHotEncoder()
@@ -75,22 +74,7 @@ def main():
 
     start_training = st.button("Start Training")
     if start_training:
-        # Use different algorithms to fit the model
-        regressor = RandomForestRegressor(n_estimators = num_estimators, random_state = 0)
-
-        # fitting the training data
-        regressor.fit(X_train,y_train)
-
-        # param_grid = {
-        #         'n_estimators': [5, 10, 25, 50, 100]            
-        #     }
-            
-        # # Instantiate the grid search model
-        # gscv_rfc = GridSearchCV(estimator = regressor, param_grid = param_grid).fit(X_train, y_train)
-
-        best_params = 10 #gscv_rfc.best_params_
-
-        regressor_best_params = RandomForestRegressor(n_estimators = 10, random_state = 0)
+        regressor_best_params = RandomForestRegressor(n_estimators = num_estimators, random_state = 0)
 
         # fitting the training data
         regressor_best_params.fit(X_train,y_train)
@@ -107,30 +91,42 @@ def main():
         # Residual Analysis
         residuals = y_train - y_train_prediction
         
-        fig, axes = plt.subplots(2, 2)
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
         fig.suptitle('Residual Analysis')
-        fig.tight_layout(h_pad=5)
+        fig.tight_layout(h_pad=2)
+
+        plt.subplots_adjust(top=0.85)
 
         sns.regplot(x=y_train_prediction, y=residuals,
-                    ax=axes[0,0], scatter_kws={"color": "blue"},
+                    ax=axes[0], scatter_kws={"color": "blue"},
                     line_kws={"color": "orange"}, marker='+')
         # axes[0,0].set_title ('Residual vs fitted plot')
-        axes[0,0].set_xlabel("Fitted values")
-        axes[0,0].set_ylabel("Residuals")
+        axes[0].set_xlabel("Fitted values")
+        axes[0].set_ylabel("Residuals")
     
-        axes[0,1].set_title('Histogram')
-        sns.distplot(residuals,norm_hist=True,ax=axes[0,1])
+        axes[1].set_title('Histogram')
+        sns.distplot(residuals,norm_hist=True,ax=axes[1])
 
-        axes[1,0].set_title('Q-Q Plot')
-        stats.probplot(residuals,plot=axes[1,0])
+        axes[2].set_title('Q-Q Plot')
+        stats.probplot(residuals,plot=axes[2])
         st.balloons()
         st.pyplot(fig)
 
+        importances = regressor_best_params.feature_importances_
+        indices = np.argsort(importances)
+
+        fig = plt.figure(figsize = (10, 5))
+        plt.title('Feature Importances')
+        plt.barh(range(len(indices)), importances[indices], color='b', align='center')
+        plt.yticks(range(len(indices)), [X.columns[i] for i in indices], fontsize=5)
+        plt.xlabel('Relative Importance')
+        st.pyplot(fig)
+
         with open('models/model.pkl', 'wb') as handle:
-            pickle.dump(regressor, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(regressor_best_params, handle)
 
         with open('models/standardScaler.pkl', 'wb') as handle:
-            pickle.dump(std, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(std, handle)
 
         Metro_dummies.to_csv("models/Metro_dummies.csv", index=False)
         State_dummies.to_csv("models/State_dummies.csv", index=False)

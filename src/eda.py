@@ -14,6 +14,8 @@ def app():
     st.write("\n")
     data = fetch_data()
 
+    geo_df = pd.read_csv("models/county_data.csv")
+
     # app, out = st.columns(2)
     config, chart=st.columns((4,6))
 
@@ -31,7 +33,7 @@ def app():
 
     county_check = config_expander.checkbox('County')
     if county_check:
-        county_filter = config_expander.selectbox("Select County", data["County"].unique())
+        county_filter = config_expander.selectbox("Select County", data[data["State"]==state_filter]["County"].unique())
 
     if state_check and county_check:
         data = data[(data["State"] == state_filter) & (data["County"] == county_filter)]
@@ -52,23 +54,36 @@ def app():
         config.dataframe(data)
         config.info("Shape (Rows, Columns) : {}".format(data.shape))
 
-    values = ['Per_Capita_Income','Perc_Diff_Income_County_vs_State',
-              'Per_Capita_GDP', 'UNP_Rate',
-              'higher_degree', 'Population_Density']
+    # values = ['Per_Capita_Income','Perc_Diff_Income_County_vs_State',
+    #           'Per_Capita_GDP', 'UNP_Rate',
+    #           'higher_degree', 'Population_Density']
+    
+    name_dict = {"Per Capita Income": 'Per_Capita_Income',
+                 'Percentage Difference Income': 'Perc_Diff_Income_County_vs_State',
+                 'Per Capita GDP': 'Per_Capita_GDP',
+                 'Unemployment Rate': 'UNP_Rate',
+                 'Higher Degree Percentage': 'higher_degree',
+                 'Population Density': 'Population_Density'}
 
     predictor_var1 = "Crime_Density_Per_1000"#chart.selectbox("Select the Social First Indicator Trend", values, index=values.index("Crime_Density_Per_1000"))
-    predictor_var2 = chart.selectbox("Select the Social Second Indicator Trend", values, index=values.index("UNP_Rate"))
+    temp_var2 = chart.selectbox("Select the Social Indicator Trend", list(name_dict.keys()), index=3)
 
-    fig, ax = plt.subplots()
-    sns.heatmap(data.corr(), ax=ax, annot=True)
-    config.write(fig)
+    predictor_var2 = name_dict[temp_var2]
 
-    temp1 = data.groupby(by=["Year"]).sum()[predictor_var1]
-    temp2 = data.groupby(by=["Year"]).sum()[predictor_var2]
+    # fig, ax = plt.subplots()
+    # sns.heatmap(data.corr(), ax=ax, annot=True)
+    # config.write(fig)
+
+    temp1 = data.groupby(by=["Year"]).agg('mean')[predictor_var1]
+    temp2 = data.groupby(by=["Year"]).agg('mean')[predictor_var2]
 
     x_index = list(temp1.index)
     y1 = temp1.values
     y2 = temp2.values
+
+    # map1, space1, map2, space2 = st.columns([4,2,4,2])
+    # space1.write('\n')
+    # space2.write('\n')
 
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -80,13 +95,13 @@ def app():
     )
 
     fig.add_trace(
-        go.Scatter(x=x_index, y=y2, name=predictor_var2),
+        go.Scatter(x=x_index, y=y2, name=temp_var2),
         secondary_y=True,
     )
 
     # Add figure title
     fig.update_layout(
-        title_text="{} v/s {}".format(predictor_var1, predictor_var2)
+        title_text="{} v/s {}".format(predictor_var1, temp_var2)
     )
 
     # Set x-axis title
@@ -94,7 +109,7 @@ def app():
 
     # Set y-axes titles
     fig.update_yaxes(title_text="{}".format(predictor_var1), secondary_y=False)
-    fig.update_yaxes(title_text="{}".format(predictor_var2), secondary_y=True)
+    fig.update_yaxes(title_text="{}".format(temp_var2), secondary_y=True)
 
     chart.plotly_chart(fig)
 
@@ -102,20 +117,23 @@ def app():
     with urlopen('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json') as response:
         counties = json.load(response)
 
-    df_pred = data.groupby(["GeoFIPS"])[predictor_var1].agg('mean').to_frame()
-    df_pred["GeoFIPS"] = df_pred.index
-    # print(df_pred.head())
+    # df_pred = data.groupby(["GeoFIPS"])[predictor_var1].agg('mean').to_frame()
+    # df_pred["GeoFIPS"] = df_pred.index
+    # # print(df_pred.head())
 
-    fig2 = px.choropleth_mapbox(df_pred, geojson=counties, locations='GeoFIPS', color=predictor_var1,
-                            color_continuous_scale="Viridis",
-                            range_color=(0, 12),
-                            mapbox_style="carto-positron",
-                            zoom=3, center = {"lat": 37.0902, "lon": -95.7129},
-                            opacity=0.5,
-                            labels={'unemp':'unemployment rate'}
-                            )
-    fig2.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-    chart.plotly_chart(fig2)
+    # fig2 = px.choropleth_mapbox(df_pred, geojson=counties, locations='GeoFIPS', color=predictor_var1,
+    #                         color_continuous_scale="Viridis",
+    #                         range_color=(0, 12),
+    #                         mapbox_style="carto-positron",
+    #                         zoom=3, center = {"lat": 37.0902, "lon": -95.7129},
+    #                         opacity=0.5,
+    #                         labels={'unemp':'unemployment rate'}
+    #                         )
+    # fig2.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+
+    # fig2.update_layout(coloraxis_colorbar_x=-0.1)
+
+    # map1.plotly_chart(fig2)
 
     df_pred2 = data.groupby(["GeoFIPS"])[predictor_var2].agg('mean').to_frame()
     df_pred2["GeoFIPS"] = df_pred2.index
@@ -126,8 +144,7 @@ def app():
                             range_color=(0, 12),
                             mapbox_style="carto-positron",
                             zoom=3, center = {"lat": 37.0902, "lon": -95.7129},
-                            opacity=0.5,
-                            labels={'unemp':'unemployment rate'}
+                            opacity=0.5
                             )
     fig3.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-    chart.plotly_chart(fig3)
+    st.plotly_chart(fig3)

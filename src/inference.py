@@ -1,6 +1,11 @@
 import streamlit as st
 import pickle
 import pandas as pd
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+import plotly.express as px
+
+from src.data import *
 
 
 def generate_dummies(x, dummies, var):
@@ -25,42 +30,47 @@ def app():
 
     with open('models/standardScaler.pkl', 'rb') as handle:
         sc = pickle.load(handle)
+
+    with open("../crime_analytics/models/dense_state.txt", "rb") as fp:
+        dense_state = pickle.load(fp)
+
+    geo_df = pd.read_csv("models/county_data.csv")
+    geo_df = geo_df[geo_df['State'].isin(dense_state)].reset_index(drop=True)   
     
     State_dummies = pd.read_csv('models/State_dummies.csv')
     Metro_dummies = pd.read_csv('models/Metro_dummies.csv')
+
+    past_data = fetch_data()
     
     num_cols = ['Per_Capita_Income', 'Perc_Diff_Income_County_vs_State', 'Per_Capita_GDP', 'UNP_Rate', 'higher_degree', 'Population_Density']
 
-    col1, col2, col3, col4 = st.columns(4)
 
-    per_capita_income = col1.number_input("Per_Capita_Income", value=33348.0)
-    diff_income = col2.number_input("Perc_Diff_Income_County_vs_State", value=-27.713806)
+    col1, col2 = st.columns(2)
+    state = col1.selectbox("Select State", geo_df["State"].unique())
 
-    per_capita_gdp = col3.number_input("Per_Capita_GDP", value=22.315484)
+    county = col2.selectbox("Select State", geo_df[geo_df["State"] == state]["County"].unique())
 
-    unp_rate = col4.number_input("UNP_Rate", value=8.8)
+    county_area = geo_df[(geo_df["State"] == state) & (geo_df["County"] == county)]["County_Area"].unique()[0]
 
-    higher_degree = col1.number_input("higher_degree", value=26.571573)
+    population = col1.number_input("Population", value=54773.0)  
+    gdp = col2.number_input("GDP", value=1222286.0)  
+    per_capita_income = col1.number_input("Per Capita Income", value=33348.0)
+    state_avg_income = col2.number_input("State Average Income", value=42590)
+    unp_rate = col1.number_input("Unemployment Rate", value=8.8)
+    higher_degree = col2.number_input("Higher Degree Percentage", value=26.571573) 
 
-    population_density = col2.number_input("Population_Density", value=0.000036)
+    population_density = population / county_area
 
-    metro_values = ['Metropolitan', 'Nonmetropolitan']
-    metro = col3.selectbox("Metro", metro_values, index=metro_values.index("Nonmetropolitan"))
+    per_capita_gdp = gdp/population
 
-    state_values = ['ALABAMA', 'ARIZONA', 'ARKANSAS', 'CALIFORNIA', 'COLORADO',
-       'DELAWARE', 'FLORIDA', 'GEORGIA', 'IDAHO', 'ILLINOIS', 'INDIANA',
-       'IOWA', 'KANSAS', 'KENTUCKY', 'MAINE', 'MARYLAND', 'MICHIGAN',
-       'MISSISSIPPI', 'MISSOURI', 'MONTANA', 'NEBRASKA', 'NEVADA',
-       'NEW HAMPSHIRE', 'NEW JERSEY', 'NEW MEXICO', 'NEW YORK',
-       'NORTH CAROLINA', 'NORTH DAKOTA', 'OHIO', 'OKLAHOMA', 'OREGON',
-       'PENNSYLVANIA', 'SOUTH CAROLINA', 'SOUTH DAKOTA', 'TENNESSEE',
-       'TEXAS', 'UTAH', 'VERMONT', 'VIRGINIA', 'WASHINGTON',
-       'WEST VIRGINIA', 'WISCONSIN', 'WYOMING', 'MINNESOTA']
+    diff_income = per_capita_income - state_avg_income
 
-    state = col4.selectbox("State", state_values, index=state_values.index("ALABAMA"))
+    perc_diff_income = diff_income/per_capita_income*100
+
+    metro = geo_df[(geo_df["State"] == state) & (geo_df["County"] == county)]["Metro"].unique()[0]
 
     test_dict = {'Per_Capita_Income': per_capita_income,
-                 'Perc_Diff_Income_County_vs_State': diff_income,
+                 'Perc_Diff_Income_County_vs_State': perc_diff_income,
                  'Per_Capita_GDP': per_capita_gdp, 'UNP_Rate': unp_rate,
                  'higher_degree': higher_degree, 'Population_Density': population_density,
                  'Metro': metro, "State": state}
@@ -80,4 +90,30 @@ def app():
 
         pred = round(model.predict(x_test.values.reshape(1,-1))[0], 4)
 
-        st.metric("Crime_Density_Per_1000", str(pred), str(12.3783))
+        past_data = past_data[past_data["State"] == state]
+        temp = past_data.groupby(by=["Year"]).agg('mean')["Crime_Density_Per_1000"]
+
+        print(temp)
+
+        predictor_var1 = 'Crime_Density_Per_1000'
+
+        x_index = list(temp.index)
+        x_index.append('2020')
+        y = list(temp.values)
+        y.append(pred)
+
+        print("x_index", x_index)
+        print("Y value", y)
+
+        fig = px.line(x = x_index, #Columns from the data frame
+                    y = y,
+                    title = "Crime Density per 1000 Trend",
+                    markers=True
+                    )
+        # fig.update_traces(line_color = "blue")
+        st.plotly_chart(fig)
+
+        last_datapoint = (round(y[-2], 4) * population)/1000
+        pred = (pred*population)/1000
+
+        st.metric("Total Crime", str(pred), str(last_datapoint))
