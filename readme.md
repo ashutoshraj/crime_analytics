@@ -2,6 +2,16 @@
 
 Crime in society has been on the rise globally, being particularly pronounced in urban areas, and is a major concern for law enforcement and social services. Scholars, institutions, and governments have undertaken studies to understand the causes of crime, and varied opinions have emerged, commonly identified causes include increased urbanization, nuclear families, population densities, education, income disparities and unemployment. A vast body of studies have concluded that social indicators are a key determinant of crime. However, despite the overwhelming amount of material on this subject, it is difficult to get a comprehensive depiction of the causal relationships between crime and social indicators. Further there is lack of visual presentation of data and crime models, particularly a model that can be applied to entire US or any state or county of US. Our project collects crime data and data on predictors from several sources, performs data cleaning, exploratory analysis and modeling to provide analytics and a model to predict crime in the US.
 
+## Contents
+
+* Exploratory Data Analysis. [Pg.1]
+  * Filtering of data based upon Country, State and County.
+  * Scatter plot of target versus all predictor variables.
+  * Chloropleth Map showcasing the intensity of the predictor variable based upon selection. (State/County)
+* Model Creation. [Pg.2]
+* Prediction. [Pg.3]
+
+
 ## Installation
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install Crime Analytics.

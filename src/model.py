@@ -74,13 +74,14 @@ def main():
 
     start_training = st.button("Start Training")
     if start_training:
-        regressor_best_params = RandomForestRegressor(n_estimators = num_estimators, random_state = 0)
+
+        regressor = RandomForestRegressor(n_estimators = num_estimators, random_state = 0)
 
         # fitting the training data
-        regressor_best_params.fit(X_train,y_train)
+        regressor.fit(X_train,y_train)
 
-        y_train_prediction =  regressor_best_params.predict(X_train)
-        y_prediction =  regressor_best_params.predict(X_test)
+        y_train_prediction =  regressor.predict(X_train)
+        y_prediction =  regressor.predict(X_test)
 
         # Model Accuracy Metrics
         score=r2_score(y_test,y_prediction)
@@ -112,7 +113,7 @@ def main():
         st.balloons()
         st.pyplot(fig)
 
-        importances = regressor_best_params.feature_importances_
+        importances = regressor.feature_importances_
         indices = np.argsort(importances)
 
         fig = plt.figure(figsize = (10, 5))
@@ -123,7 +124,7 @@ def main():
         st.pyplot(fig)
 
         with open('models/model.pkl', 'wb') as handle:
-            pickle.dump(regressor_best_params, handle)
+            pickle.dump(regressor, handle)
 
         with open('models/standardScaler.pkl', 'wb') as handle:
             pickle.dump(std, handle)

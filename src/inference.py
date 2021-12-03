@@ -94,7 +94,7 @@ def app():
         past_data = past_data[past_data["State"] == state]
         temp = past_data.groupby(by=["Year"]).agg('mean')["Crime_Density_Per_1000"]
 
-        print(temp)
+        # print(temp)
 
         predictor_var1 = 'Crime_Density_Per_1000'
 
