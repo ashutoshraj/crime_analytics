@@ -48,7 +48,7 @@ def app():
     col1, col2 = st.columns(2)
     state = col1.selectbox("Select State", geo_df["State"].unique())
 
-    county = col2.selectbox("Select State", geo_df[geo_df["State"] == state]["County"].unique())
+    county = col2.selectbox("Select County", geo_df[geo_df["State"] == state]["County"].unique())
 
     county_area = geo_df[(geo_df["State"] == state) & (geo_df["County"] == county)]["County_Area"].unique()[0]
 
@@ -57,7 +57,8 @@ def app():
     per_capita_income = col1.number_input("Per Capita Income", value=33348.0)
     state_avg_income = col2.number_input("State Average Income", value=42590)
     unp_rate = col1.number_input("Unemployment Rate", value=8.8)
-    higher_degree = col2.number_input("Higher Degree Percentage", value=26.571573) 
+    higher_degree = col2.number_input("Higher Degree Percentage", value=26.571573)
+    year = col1.selectbox('Year', range(2019, 2050))
 
     population_density = population / county_area
 
@@ -98,22 +99,27 @@ def app():
         predictor_var1 = 'Crime_Density_Per_1000'
 
         x_index = list(temp.index)
-        x_index.append('2020')
+        x_index.append(year)
         y = list(temp.values)
         y.append(pred)
-
-        print("x_index", x_index)
-        print("Y value", y)
 
         fig = px.line(x = x_index, #Columns from the data frame
                     y = y,
                     title = "Crime Density per 1000 Trend",
                     markers=True
                     )
+        fig.add_scatter(x = [fig.data[0].x[-1]],
+                        y = [fig.data[0].y[-1]],
+                        text="Prediction",
+                        mode='markers+text',
+                        marker=dict(color='red', size=10),
+                        textfont=dict(color='green', size=10),
+                        textposition='top left',
+                        showlegend=False)
         # fig.update_traces(line_color = "blue")
         st.plotly_chart(fig)
 
         last_datapoint = (round(y[-2], 4) * population)/1000
         pred = (pred*population)/1000
 
-        st.metric("Total Crime", str(pred), str(last_datapoint))
+        st.metric("Total Crime", "{} Predicted".format(int(pred)), "{} Last Available Data".format(int(last_datapoint)))

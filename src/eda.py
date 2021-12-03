@@ -59,7 +59,7 @@ def app():
     #           'higher_degree', 'Population_Density']
     
     name_dict = {"Per Capita Income": 'Per_Capita_Income',
-                 'Percentage Difference Income': 'Perc_Diff_Income_County_vs_State',
+                 'Percentage Difference Income County vs State': 'Perc_Diff_Income_County_vs_State',
                  'Per Capita GDP': 'Per_Capita_GDP',
                  'Unemployment Rate': 'UNP_Rate',
                  'Higher Degree Percentage': 'higher_degree',
